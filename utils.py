@@ -61,3 +61,42 @@ def create_learning_rate_schedule(total_steps, base_lr, decay_type='cosine', war
         return base_lr * warmup_ratio * decay_ratio
 
     return learning_rate_fn
+
+
+def accumulate_gradient(grad_fn, params, images, labels, accum_steps):
+    """
+    Accumulates gradients across multiple steps for gradient accumulation.
+
+    Args:
+        grad_fn: Gradient computation function.
+        params: Model parameters.
+        images: Input images.
+        labels: Ground-truth labels.
+        accum_steps: Number of steps to accumulate gradients.
+
+    Returns:
+        Accumulated loss and gradient.
+    """
+    def accumulate_step(carry, batch):
+        grad_accum, loss_accum = carry
+        loss, grads = grad_fn(params, batch['image'], batch['label'])
+        grad_accum = jax.tree_map(lambda x, y: x + y, grad_accum, grads)
+        loss_accum += loss
+        return (grad_accum, loss_accum), None
+
+    # Initialize gradient accumulator and loss accumulator
+    initial_grads = jax.tree_map(jnp.zeros_like, params)
+    initial_loss = 0.0
+    carry = (initial_grads, initial_loss)
+
+    (final_grads, final_loss), _ = jax.lax.scan(
+        accumulate_step,
+        carry,
+        xs={'image': jnp.array_split(images, accum_steps),
+            'label': jnp.array_split(labels, accum_steps)}
+    )
+
+    # Average gradients and loss
+    final_grads = jax.tree_map(lambda x: x / accum_steps, final_grads)
+    final_loss /= accum_steps
+    return final_loss, final_grads
