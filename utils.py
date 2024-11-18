@@ -136,3 +136,17 @@ def load_checkpoint(checkpoint_path, params):
 
     return jax.tree_map(load_fn, params, loaded_params)
 
+def accuracy(logits, labels):
+    """
+    Computes accuracy based on model predictions and true labels.
+
+    Args:
+        logits: Predicted logits from the model.
+        labels: Ground-truth one-hot encoded labels.
+
+    Returns:
+        Accuracy as a percentage.
+    """
+    preds = jnp.argmax(logits, axis=-1)
+    true_labels = jnp.argmax(labels, axis=-1)
+    return jnp.mean(preds == true_labels) * 100.0
