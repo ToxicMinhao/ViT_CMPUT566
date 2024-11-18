@@ -100,3 +100,39 @@ def accumulate_gradient(grad_fn, params, images, labels, accum_steps):
     final_grads = jax.tree_map(lambda x: x / accum_steps, final_grads)
     final_loss /= accum_steps
     return final_loss, final_grads
+
+def save_checkpoint(directory, params, step, prefix='ckpt_'):
+    """
+    Saves model parameters as a checkpoint.
+
+    Args:
+        directory: Directory where the checkpoint will be saved.
+        params: Model parameters to save.
+        step: Training step number.
+        prefix: Prefix for the checkpoint file name.
+    """
+    checkpoint_path = f"{directory}/{prefix}{step}.npz"
+    with open(checkpoint_path, 'wb') as f:
+        np.savez(f, **jax.tree_map(lambda x: np.asarray(x), params))
+    print(f"Checkpoint saved: {checkpoint_path}")
+
+def load_checkpoint(checkpoint_path, params):
+    """
+    Loads model parameters from a checkpoint.
+
+    Args:
+        checkpoint_path: Path to the checkpoint file.
+        params: Current model parameters (used to match the structure).
+
+    Returns:
+        Loaded parameters.
+    """
+    with open(checkpoint_path, 'rb') as f:
+        loaded = np.load(f)
+        loaded_params = {key: loaded[key] for key in loaded.files}
+
+    def load_fn(current, checkpointed):
+        return checkpointed if checkpointed.shape == current.shape else current
+
+    return jax.tree_map(load_fn, params, loaded_params)
+
