@@ -42,3 +42,39 @@ def augment_image(image, label, image_size):
     image = (image - 0.5) * 2.0  # Scale to [-1, 1]
 
     return image, label
+
+def get_dataset(dataset_name, split, image_size, batch_size, is_training):
+    """
+    Loads and preprocesses a dataset.
+    
+    Args:
+        dataset_name: Name of the dataset (e.g., 'imagenet2012').
+        split: Dataset split ('train' or 'validation').
+        image_size: Target image size.
+        batch_size: Batch size for training or evaluation.
+        is_training: Whether the dataset is for training or evaluation.
+        
+    Returns:
+        A tf.data.Dataset object.
+    """
+    # Load dataset
+    ds = tfds.load(dataset_name, split=split, as_supervised=True)
+
+    # Apply preprocessing and augmentations
+    if is_training:
+        ds = ds.shuffle(1000).repeat()  # Shuffle and repeat for training
+        ds = ds.map(
+            lambda img, lbl: augment_image(img, lbl, image_size),
+            num_parallel_calls=tf.data.experimental.AUTOTUNE,
+        )
+    else:
+        ds = ds.map(
+            lambda img, lbl: preprocess_image(img, lbl, image_size),
+            num_parallel_calls=tf.data.experimental.AUTOTUNE,
+        )
+
+    # Batch and prefetch
+    ds = ds.batch(batch_size)
+    ds = ds.prefetch(tf.data.experimental.AUTOTUNE)
+
+    return ds
