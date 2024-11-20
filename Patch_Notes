@@ -2,7 +2,16 @@ Patch Notes - Nov 13:
   Created Vit_CMPUT566 repository.
   Uploaded file vision_transformer.py.
   Completed implementation of three classes from models_vit.py:
-  IdentityLayer renamed to NamingLayer.
-  AddPositionEmbs renamed to PositionalEmbedding.
-  MlpBlock renamed to MLP_Encoder.
+    IdentityLayer renamed to NamingLayer.
+    AddPositionEmbs renamed to PositionalEmbedding.
+    MlpBlock renamed to MLP_Encoder.
   Updated MLP_Encoder: The output dimension is now constrained to be equal to the input embedding_dimension, instead of allowing a freely allocated output dimension size.
+
+Patch Notes - Nov 19:
+  Archived old versions of Python files.
+  Completed implementation of two classes from models_vit.py:
+    Encoder1DBlock renamed to Transformer_Encoder.
+    Encoder remains unchanged.
+  Added assertions in all classes to prevent incorrect input dimension sizes.
+  Updated Encoder: The normalization layer now operates with float32 precision.
+  Completed syntax error checks for each class.
