@@ -15,3 +15,10 @@ Patch Notes - Nov 19:
   Added assertions in all classes to prevent incorrect input dimension sizes.
   Updated Encoder: The normalization layer now operates with float32 precision.
   Completed syntax error checks for each class.
+
+Patch Notes - Nov 20:
+  Archived old versions of Python files.
+  Completed the implementation of the entire Vision Transformer model.
+  Created v1 and v2 versions for vision_transformer:
+    v1 replicates the original paper with some modifications.
+    v2 replicates the original paper with full optimizations.
