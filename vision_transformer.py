@@ -124,10 +124,10 @@ class Encoder(nn.Module):
         
         x = PositionalEmbedding(
             name='PositionalEmbedding',
-            init_param_positional_embedding=nn.initializers.normal(stddev=0.02)
+            init_param_positional_embedding = nn.initializers.normal(stddev = 0.02)
         )(inputs)
         
-        x = nn.Dropout(rate=self.dropout_rate)(x, deterministic=not train)  # when train, deterministic is False, meaning dropout will be activated.
+        x = nn.Dropout(rate = self.dropout_rate)(x, deterministic = not train)  # when train, deterministic is False, meaning dropout will be activated.
 
         for lyr in range(self.num_layers):
             x = Transformer_Encoder(
@@ -140,4 +140,56 @@ class Encoder(nn.Module):
         
         encoded = nn.LayerNorm(dtype=self.inference_dtype)(x)
         return encoded
-    
+
+class VisionTransformer(nn.Module):
+    """Vision Transformer without ResNet backbone."""
+    hidden_size: int
+    patches: Any  # Defines the size of the patches (e.g., 16x16)
+    transformer: Any  # Configuration for the Transformer encoder
+    num_classes: int  # Number of output classes for classification
+
+    @nn.compact
+    def __call__(self, inputs, *, train):  # Input will be a batch of images
+        # Extract patches and project them to the hidden dimension
+        x = nn.Conv(
+            features=self.hidden_size,
+            kernel_size=self.patches.size,
+            strides=self.patches.size,
+            padding='VALID',
+            name='patch_embedding')(inputs)  # Better naming
+        
+        # Reshape for Transformer input
+        n, h, w, c = x.shape  # n: batch size, h: patches along height, w: patches along width, c: embedding dimension
+        x = jnp.reshape(x, [n, h * w, c])  # Reshape to flatten 2D to 1D
+        
+        # Add a class token
+        cls = self.param('cls', nn.initializers.zeros, (1, 1, c))
+        cls = jnp.tile(cls, [n, 1, 1])  # Replicate token for each image in the batch
+        x = jnp.concatenate([cls, x], axis=1)  # Concatenate token to patches
+
+        # Apply Transformer encoder
+        x = Encoder(
+            num_layers=self.transformer['num_layers'],
+            MLP_dimension=self.transformer['MLP_dimension'],
+            num_heads=self.transformer['num_heads'],
+            dropout_rate=self.transformer.get('dropout_rate', 0.1),
+            dropout_rate_attention=self.transformer.get('dropout_rate_attention', 0.1)
+        )(x, train=train)
+
+        # Use the class token output for classification
+        x = x[:, 0]  # Extract the class token
+        
+        # Classification head
+        x = nn.Dense(
+            features=self.num_classes,
+            name='head',
+            kernel_init=nn.initializers.xavier_uniform(),  # Consider using Xavier initialization
+            bias_init=nn.initializers.zeros
+        )(x)
+        
+        return x
+
+
+
+
+        
